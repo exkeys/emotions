@@ -2,18 +2,6 @@
 import { supabase } from '../config/database.js';
 import { openai } from '../config/openai.js';
 
-// 피곤함 점수를 이모지로 변환하는 함수
-function getEmojiFromFatigue(fatigue) {
-	const emojiMap = {
-		0: '😍', // 매우 좋음
-		1: '😆', // 좋음
-		2: '😯', // 보통
-		3: '😐', // 나쁨
-		4: '😭', // 매우 나쁨
-		5: '😡'  // 화남
-	};
-	return emojiMap[fatigue] || '😐'; // 기본값
-}
 
 
 
@@ -67,10 +55,7 @@ export async function handleRecordRequest(req, res) {
 		}
 		*/
 
-		   // 피곤함 점수에 따른 이모지 생성
-		   const emoji = getEmojiFromFatigue(fatigue);
-		   
-		   const upsertData = { user_id, date, fatigue, notes, title, emotion, emoji };
+		   const upsertData = { user_id, date, fatigue, notes, title, emotion };
 		   console.log('🛠️ Supabase upsert 데이터:', upsertData);
 		   const { data, error } = await supabase
 			   .from('records')
