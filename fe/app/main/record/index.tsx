@@ -55,6 +55,19 @@ export default function RecordScreen() {
     getCurrentUser();
   }, []);
 
+  // 이모지를 점수로 변환하는 함수
+  const getScoreFromEmoji = (emoji: string): number => {
+    const emojiMap: { [key: string]: number } = {
+      '😍': 0, // 매우 좋음
+      '😆': 1, // 좋음
+      '😯': 2, // 보통
+      '😐': 3, // 나쁨
+      '😭': 4, // 매우 나쁨
+      '😡': 5  // 화남
+    };
+    return emojiMap[emoji] || 2; // 기본값 2 (보통)
+  };
+
   const saveHandler = async () => {
     if (!title || !content || !emoji) {
       alert("모든 항목을 입력해주세요.");
@@ -70,11 +83,14 @@ export default function RecordScreen() {
     setError(null);
 
     try {
+      // 이모지에서 점수 변환
+      const fatigueScore = getScoreFromEmoji(emoji);
+      
       // 백엔드 API 호출
       const recordData: RecordData = {
         user_id: userId, // 실제 사용자 ID 사용
         date: format(selectedDate, 'yyyy-MM-dd'),
-        fatigue: 5, // 기본값 (나중에 UI에서 입력받도록 수정 가능)
+        fatigue: fatigueScore, // 이모지에서 변환된 점수
         notes: content,
         title: title,
       };

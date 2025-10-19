@@ -5,6 +5,7 @@ import { openai } from '../config/openai.js';
 
 
 
+
 export async function handleRecordRequest(req, res) {
 	try {
 		const { user_id, date, fatigue, notes, title } = req.body;
