@@ -9,6 +9,12 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
 	process.exit(1);
 }
 
+// 서비스 키 검증 (백엔드용)
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+	console.error(' SUPABASE_SERVICE_ROLE_KEY not set');
+	process.exit(1);
+}
+
 if (!process.env.OPENAI_API_KEY) {
 	console.error(' OpenAI API key not set');
 	process.exit(1);
@@ -17,6 +23,7 @@ if (!process.env.OPENAI_API_KEY) {
 export const env = {
 	SUPABASE_URL: process.env.SUPABASE_URL,
 	SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+	SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
 	OPENAI_API_KEY: process.env.OPENAI_API_KEY,
 	PORT: process.env.PORT || 5001,
 	REDIS_URL: process.env.REDIS_URL || null,

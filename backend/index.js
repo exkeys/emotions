@@ -13,7 +13,7 @@ import { globalErrorHandler } from './middleware/errorHandler.js';
 import { metricsMiddleware, renderPrometheusMetrics } from './middleware/metrics.js';
 
 // 서비스 import
-import { handleChatRequest, getChatHistory } from './services/chat/chatService.js';
+import { handleChatRequest, getChatHistory, getSavedChartsAPI, getChartByIdAPI, deleteChartAPI, getChartStatsAPI } from './services/chat/chatService.js';
 import { handleRecordRequest, getRecords, deleteRecord } from './services/recordService.js';
 import { getPersonalizedPosts, getUserProfile, getPersonalizedCacheStatus, updatePersonalizedCacheManual } from './services/personalizedService.js';
 import { getHotPosts, updateCache, getCacheStatus } from './services/HotissueService.js';
@@ -381,6 +381,157 @@ app.get('/api/ai-recommend/new-posts', getNewPosts);
  */
 app.get('/chat/history', getChatHistory);
 
+// 차트 관련 API 엔드포인트
+/**
+ * @swagger
+ * /charts:
+ *   get:
+ *     summary: 저장된 차트 목록 조회
+ *     tags: [Charts]
+ *     parameters:
+ *       - in: query
+ *         name: user_id
+ *         schema:
+ *           type: string
+ *           default: test_user
+ *         required: true
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: 저장된 차트 목록 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 charts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       chart_name:
+ *                         type: string
+ *                       chart_type:
+ *                         type: string
+ *                       chart_data:
+ *                         type: object
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                 count:
+ *                   type: integer
+ */
+app.get('/charts', getSavedChartsAPI);
+
+/**
+ * @swagger
+ * /charts/{chartId}:
+ *   get:
+ *     summary: 특정 차트 조회
+ *     tags: [Charts]
+ *     parameters:
+ *       - in: path
+ *         name: chartId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *       - in: query
+ *         name: user_id
+ *         schema:
+ *           type: string
+ *           default: test_user
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: 차트 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 chart:
+ *                   type: object
+ *   delete:
+ *     summary: 차트 삭제
+ *     tags: [Charts]
+ *     parameters:
+ *       - in: path
+ *         name: chartId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               user_id:
+ *                 type: string
+ *                 default: test_user
+ *             required:
+ *               - user_id
+ *     responses:
+ *       200:
+ *         description: 차트 삭제 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ */
+app.get('/charts/:chartId', getChartByIdAPI);
+app.delete('/charts/:chartId', deleteChartAPI);
+
+/**
+ * @swagger
+ * /charts/stats:
+ *   get:
+ *     summary: 차트 통계 조회
+ *     tags: [Charts]
+ *     parameters:
+ *       - in: query
+ *         name: user_id
+ *         schema:
+ *           type: string
+ *           default: test_user
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: 차트 통계 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 stats:
+ *                   type: object
+ *                   properties:
+ *                     totalCharts:
+ *                       type: integer
+ *                     typeStats:
+ *                       type: object
+ *                     latestChart:
+ *                       type: object
+ */
+app.get('/charts/stats', getChartStatsAPI);
 
 // 404 handler 
 app.use((req, res) => {
@@ -397,7 +548,11 @@ app.use((req, res) => {
       'GET /analyze-yearly',
       'POST /analyze',
       'POST /chat',
-      'GET /chat/history'
+      'GET /chat/history',
+      'GET /charts',
+      'GET /charts/:chartId',
+      'DELETE /charts/:chartId',
+      'GET /charts/stats'
     ]
   });
 });
@@ -422,5 +577,9 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('- POST /analyze (Custom analysis)');
   console.log('- POST /chat (AI Chatbot)');
   console.log('- GET  /chat/history (Chat history)');
+  console.log('- GET  /charts (Saved charts list)');
+  console.log('- GET  /charts/:chartId (Get specific chart)');
+  console.log('- DELETE /charts/:chartId (Delete chart)');
+  console.log('- GET  /charts/stats (Chart statistics)');
   console.log('- GET  /metrics (Prometheus metrics)');
 });

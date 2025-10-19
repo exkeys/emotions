@@ -13,6 +13,272 @@ dayjs.extend(timezone);
 import { textFilter } from './textFilter.js';
 import { analyzeUserIntent, calculateDateRange } from './intentAnalyze.js';
 import { generateEmotionChart } from './chartGenerator.js';
+// 차트 저장 관련 함수들을 직접 정의
+
+/**
+ * 차트 저장 함수
+ * @param {string} userId - 사용자 ID
+ * @param {Object} chartData - 차트 데이터
+ * @param {Object} chartConfig - 차트 설정
+ * @param {string} chartType - 차트 타입 (line, bar, pie)
+ * @param {string} periodStart - 차트 기간 시작일
+ * @param {string} periodEnd - 차트 기간 종료일
+ * @returns {Promise<Object>} 저장 결과
+ */
+async function saveChart(userId, chartData, chartConfig, chartType, periodStart, periodEnd) {
+  try {
+    console.log('📊 차트 저장 시작:', { userId, chartType, periodStart, periodEnd });
+
+    // 차트 이름 생성
+    const chartName = `${periodStart} 감정 차트`;
+
+    // 새 차트 저장
+    const { data, error } = await supabase
+      .from('saved_charts')
+      .insert({
+        user_id: userId,
+        chart_name: chartName,
+        chart_type: chartType,
+        chart_data: chartData,
+        chart_config: chartConfig,
+        period_start: periodStart,
+        period_end: periodEnd
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ 차트 저장 오류:', error);
+      throw error;
+    }
+
+    console.log('✅ 차트 저장 성공:', data.id);
+
+    // 20개 제한 자동 정리
+    await cleanupOldCharts(userId);
+
+    return {
+      success: true,
+      chartId: data.id,
+      message: '차트가 성공적으로 저장되었습니다.'
+    };
+
+  } catch (error) {
+    console.error('🚨 차트 저장 실패:', error);
+    throw error;
+  }
+}
+
+/**
+ * 사용자의 저장된 차트 목록 조회
+ * @param {string} userId - 사용자 ID
+ * @param {number} limit - 조회할 개수 (기본값: 20)
+ * @returns {Promise<Array>} 차트 목록
+ */
+async function getSavedCharts(userId, limit = 20) {
+  try {
+    console.log('📚 저장된 차트 조회:', { userId, limit });
+
+    const { data, error } = await supabase
+      .from('saved_charts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('❌ 차트 조회 오류:', error);
+      throw error;
+    }
+
+    console.log('✅ 차트 조회 성공:', data?.length || 0, '개');
+
+    return data || [];
+
+  } catch (error) {
+    console.error('🚨 차트 조회 실패:', error);
+    throw error;
+  }
+}
+
+/**
+ * 특정 차트 조회
+ * @param {string} chartId - 차트 ID
+ * @param {string} userId - 사용자 ID
+ * @returns {Promise<Object>} 차트 정보
+ */
+async function getChartById(chartId, userId) {
+  try {
+    console.log('🔍 특정 차트 조회:', { chartId, userId });
+
+    const { data, error } = await supabase
+      .from('saved_charts')
+      .select('*')
+      .eq('id', chartId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error) {
+      console.error('❌ 차트 조회 오류:', error);
+      throw error;
+    }
+
+    console.log('✅ 차트 조회 성공:', data.id);
+
+    return data;
+
+  } catch (error) {
+    console.error('🚨 차트 조회 실패:', error);
+    throw error;
+  }
+}
+
+/**
+ * 차트 삭제
+ * @param {string} chartId - 차트 ID
+ * @param {string} userId - 사용자 ID
+ * @returns {Promise<Object>} 삭제 결과
+ */
+async function deleteChart(chartId, userId) {
+  try {
+    console.log('🗑️ 차트 삭제:', { chartId, userId });
+
+    const { data, error } = await supabase
+      .from('saved_charts')
+      .delete()
+      .eq('id', chartId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ 차트 삭제 오류:', error);
+      throw error;
+    }
+
+    console.log('✅ 차트 삭제 성공:', data.id);
+
+    return {
+      success: true,
+      message: '차트가 성공적으로 삭제되었습니다.'
+    };
+
+  } catch (error) {
+    console.error('🚨 차트 삭제 실패:', error);
+    throw error;
+  }
+}
+
+/**
+ * 20개 제한 자동 정리 함수
+ * @param {string} userId - 사용자 ID
+ * @param {number} maxCharts - 최대 차트 개수 (기본값: 20)
+ */
+async function cleanupOldCharts(userId, maxCharts = 20) {
+  try {
+    console.log('🧹 차트 자동 정리 시작:', { userId, maxCharts });
+
+    // 사용자의 총 차트 개수 확인
+    const { count, error: countError } = await supabase
+      .from('saved_charts')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (countError) {
+      console.error('❌ 차트 개수 확인 오류:', countError);
+      return;
+    }
+
+    console.log('📊 현재 차트 개수:', count);
+
+    // 20개 초과 시 오래된 것들 삭제
+    if (count > maxCharts) {
+      const deleteCount = count - maxCharts;
+      console.log('🗑️ 삭제할 차트 개수:', deleteCount);
+
+      // 오래된 차트들 조회
+      const { data: oldCharts, error: selectError } = await supabase
+        .from('saved_charts')
+        .select('id')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+        .limit(deleteCount);
+
+      if (selectError) {
+        console.error('❌ 오래된 차트 조회 오류:', selectError);
+        return;
+      }
+
+      // 오래된 차트들 삭제
+      const idsToDelete = oldCharts.map(chart => chart.id);
+      const { error: deleteError } = await supabase
+        .from('saved_charts')
+        .delete()
+        .in('id', idsToDelete);
+
+      if (deleteError) {
+        console.error('❌ 오래된 차트 삭제 오류:', deleteError);
+        return;
+      }
+
+      console.log('✅ 자동 정리 완료:', deleteCount, '개 차트 삭제됨');
+    } else {
+      console.log('✅ 정리 불필요:', '현재 차트 개수가 제한 이하');
+    }
+
+  } catch (error) {
+    console.error('🚨 자동 정리 실패:', error);
+  }
+}
+
+/**
+ * 사용자별 차트 통계 조회
+ * @param {string} userId - 사용자 ID
+ * @returns {Promise<Object>} 통계 정보
+ */
+async function getChartStats(userId) {
+  try {
+    console.log('📈 차트 통계 조회:', { userId });
+
+    const { data, error } = await supabase
+      .from('saved_charts')
+      .select('chart_type, created_at')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('❌ 차트 통계 조회 오류:', error);
+      throw error;
+    }
+
+    // 차트 타입별 개수 계산
+    const typeStats = data.reduce((acc, chart) => {
+      acc[chart.chart_type] = (acc[chart.chart_type] || 0) + 1;
+      return acc;
+    }, {});
+
+    // 최근 생성일
+    const latestChart = data.sort((a, b) => 
+      new Date(b.created_at) - new Date(a.created_at)
+    )[0];
+
+    const stats = {
+      totalCharts: data.length,
+      typeStats,
+      latestChart: latestChart ? {
+        type: latestChart.chart_type,
+        createdAt: latestChart.created_at
+      } : null
+    };
+
+    console.log('✅ 차트 통계 조회 성공:', stats);
+
+    return stats;
+
+  } catch (error) {
+    console.error('🚨 차트 통계 조회 실패:', error);
+    throw error;
+  }
+}
 
 // 맥락 포함 프롬프트 생성 함수
 function createContextPrompt(userMessage, recentMessages) {
@@ -188,6 +454,27 @@ async function handleRequest(req, res, intent, user_id, messageId) {
 		let chartData = null;
 		if (intent.needsChart) {
 			chartData = generateEmotionChart(data, req.body.message);
+			
+			// 차트가 생성되면 자동으로 저장
+			if (chartData && chartData.data) {
+				try {
+					const periodStart = intent.fromDate || calculateDateRange(intent.periodType || 'month', intent.periodValue || 1).fromDate;
+					const periodEnd = intent.toDate || calculateDateRange(intent.periodType || 'month', intent.periodValue || 1).toDate;
+					
+					await saveChart(
+						user_id,
+						chartData.data,
+						chartData.config || {},
+						chartData.type || 'line',
+						periodStart,
+						periodEnd
+					);
+					console.log('📊 차트 자동 저장 완료');
+				} catch (error) {
+					console.error('❌ 차트 저장 실패:', error);
+					// 차트 저장 실패해도 응답은 계속 진행
+				}
+			}
 		}
 		
 		// 5. 응답
@@ -424,6 +711,118 @@ export async function getChatHistory(req, res) {
 		console.error('🚨 채팅 기록 조회 오류:', error);
 		res.status(500).json({ 
 			error: '채팅 기록 조회 중 오류가 발생했습니다.',
+			details: error.message 
+		});
+	}
+}
+
+// 저장된 차트 목록 조회
+export async function getSavedChartsAPI(req, res) {
+	try {
+		const { user_id } = req.query;
+		const { limit = 20 } = req.query;
+		
+		if (!user_id) {
+			return res.status(400).json({ error: 'user_id가 필요합니다.' });
+		}
+		
+		console.log('📚 저장된 차트 조회:', { user_id, limit });
+		
+		const charts = await getSavedCharts(user_id, parseInt(limit));
+		
+		res.json({
+			success: true,
+			charts: charts,
+			count: charts.length
+		});
+		
+	} catch (error) {
+		console.error('🚨 저장된 차트 조회 오류:', error);
+		res.status(500).json({ 
+			error: '저장된 차트 조회 중 오류가 발생했습니다.',
+			details: error.message 
+		});
+	}
+}
+
+// 특정 차트 조회
+export async function getChartByIdAPI(req, res) {
+	try {
+		const { chartId } = req.params;
+		const { user_id } = req.query;
+		
+		if (!user_id || !chartId) {
+			return res.status(400).json({ error: 'user_id와 chartId가 필요합니다.' });
+		}
+		
+		console.log('🔍 특정 차트 조회:', { chartId, user_id });
+		
+		const chart = await getChartById(chartId, user_id);
+		
+		res.json({
+			success: true,
+			chart: chart
+		});
+		
+	} catch (error) {
+		console.error('🚨 특정 차트 조회 오류:', error);
+		res.status(500).json({ 
+			error: '차트 조회 중 오류가 발생했습니다.',
+			details: error.message 
+		});
+	}
+}
+
+// 차트 삭제
+export async function deleteChartAPI(req, res) {
+	try {
+		const { chartId } = req.params;
+		const { user_id } = req.body;
+		
+		if (!user_id || !chartId) {
+			return res.status(400).json({ error: 'user_id와 chartId가 필요합니다.' });
+		}
+		
+		console.log('🗑️ 차트 삭제:', { chartId, user_id });
+		
+		const result = await deleteChart(chartId, user_id);
+		
+		res.json({
+			success: true,
+			message: result.message
+		});
+		
+	} catch (error) {
+		console.error('🚨 차트 삭제 오류:', error);
+		res.status(500).json({ 
+			error: '차트 삭제 중 오류가 발생했습니다.',
+			details: error.message 
+		});
+	}
+}
+
+// 차트 통계 조회
+export async function getChartStatsAPI(req, res) {
+	try {
+		const { user_id } = req.query;
+		
+		if (!user_id) {
+			return res.status(400).json({ error: 'user_id가 필요합니다.' });
+		}
+		
+		console.log('📈 차트 통계 조회:', { user_id });
+		
+		const stats = await getChartStats(user_id);
+		
+		res.json({
+			success: true,
+			stats: stats
+		});
+		
+	} catch (error) {
+		console.error('🚨 차트 통계 조회 오류:', error);
+		res.status(500).json({ 
+			error: '차트 통계 조회 중 오류가 발생했습니다.',
 			details: error.message 
 		});
 	}
