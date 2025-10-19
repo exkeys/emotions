@@ -13,7 +13,7 @@ import { globalErrorHandler } from './middleware/errorHandler.js';
 import { metricsMiddleware, renderPrometheusMetrics } from './middleware/metrics.js';
 
 // 서비스 import
-import { handleChatRequest } from './services/chat/chatService.js';
+import { handleChatRequest, getChatHistory } from './services/chat/chatService.js';
 import { handleRecordRequest, getRecords, deleteRecord } from './services/recordService.js';
 
 // Swagger import
@@ -371,7 +371,7 @@ app.post('/chat', handleChatRequest);
  *                         type: string
  *                         format: date-time
  */
-// app.get('/chat/history', getChatHistory); // 제거됨
+app.get('/chat/history', getChatHistory);
 
 
 // 404 handler 

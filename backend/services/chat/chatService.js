@@ -14,6 +14,27 @@ import { textFilter } from './textFilter.js';
 import { analyzeUserIntent, calculateDateRange } from './intentAnalyze.js';
 import { generateEmotionChart } from './chartGenerator.js';
 
+// 맥락 포함 프롬프트 생성 함수
+function createContextPrompt(userMessage, recentMessages) {
+	if (!recentMessages || recentMessages.length === 0) {
+		return userMessage;
+	}
+	
+	// 최근 대화를 텍스트로 변환
+	const context = recentMessages
+		.map(msg => `${msg.user ? '사용자' : 'AI'}: ${msg.text}`)
+		.join('\n');
+	
+	return `
+이전 대화 맥락:
+${context}
+
+현재 질문: ${userMessage}
+
+위 대화 맥락을 참고하여 답변해주세요. "그거", "저번에", "아까" 같은 표현이 있으면 이전 대화 내용을 참고해서 답변해주세요.
+	`.trim();
+}
+
 
 async function handleSmartRequest(req, res, intent, user_id, messageId) {
 	try {
@@ -81,6 +102,9 @@ async function handleSimpleRequest(req, res, intent, user_id, messageId) {
 		const currentDate = koreaTime.format('YYYY년 MM월 DD일');
 		const currentTime = koreaTime.format('HH:mm');
 		
+		// 맥락 포함 프롬프트 생성
+		const contextPrompt = createContextPrompt(req.body.message, req.body.recent_messages || []);
+		
 		// 간단한 AI 응답
 		const completion = await openai.chat.completions.create({
 			model: 'gpt-4o-mini',
@@ -98,7 +122,7 @@ async function handleSimpleRequest(req, res, intent, user_id, messageId) {
 				},
 				{
 					role: 'user',
-					content: req.body.message
+					content: contextPrompt
 				}
 			],
 			max_tokens: 150,
@@ -158,7 +182,7 @@ async function handleRequest(req, res, intent, user_id, messageId) {
 		}
 		
 		// 3. 데이터 있으면 분석
-		const analysisResult = await analyzeData(data, intent);
+		const analysisResult = await analyzeData(data, intent, req.body.message, req.body.recent_messages || []);
 		
 		// 4. 차트 생성 (필요한 경우)
 		let chartData = null;
@@ -230,7 +254,7 @@ async function getData(intent, user_id) {
 }
 
 // 데이터 분석 함수
-async function analyzeData(data, intent) {
+async function analyzeData(data, intent, userMessage, recentMessages) {
 	// 데이터 포맷팅
 	const formatted = data
 		.sort((a, b) => new Date(a.date) - new Date(b.date))
@@ -260,7 +284,10 @@ async function analyzeData(data, intent) {
 	- **제공된 기록 데이터만 사용하고, 없으면 없다고 명확히 말해줘**
 	- **"아마도", "추정으로는", "예상으로는" 같은 표현으로 가짜 정보를 만들지 마**`;
 	
-	const userPrompt = `다음은 부모의 일/주간 피곤함 기록(1~10, 높을수록 피곤)입니다:\n${formatted}\n\n요구사항:\n- 1문장 요약\n- 관찰된 패턴 2~3개(증가/감소/반복 시점, 주말/평일 차이 등)\n- 실행 계획 3가지(아동 지원 2, 부모 자기돌봄 1: 작게 시작)\n- 격려와 응원 메시지`;
+	// 맥락 포함 프롬프트 생성
+	const contextPrompt = createContextPrompt(userMessage, recentMessages);
+	
+	const userPrompt = `다음은 부모의 일/주간 피곤함 기록(1~10, 높을수록 피곤)입니다:\n${formatted}\n\n요구사항:\n- 1문장 요약\n- 관찰된 패턴 2~3개(증가/감소/반복 시점, 주말/평일 차이 등)\n- 실행 계획 3가지(아동 지원 2, 부모 자기돌봄 1: 작게 시작)\n- 격려와 응원 메시지\n\n현재 질문: ${contextPrompt}`;
 
 	try {
 		const completion = await openai.chat.completions.create({
@@ -303,11 +330,15 @@ function getDateRangeDisplay(intent) {
 // 메인 채팅 요청 처리 함수
 export async function handleChatRequest(req, res) {
 	try {
-		const { message, user_id = 'test_user' } = req.body;
+		const { message, user_id = 'test_user', recent_messages = [] } = req.body;
 		const trimmed = typeof message === 'string' ? message.trim() : '';
 		if (!trimmed) {
 			return res.status(400).json({ error: 'Message is required' });
 		}
+
+		// 최근 대화 맥락 생성
+		const contextPrompt = createContextPrompt(trimmed, recent_messages);
+		console.log('📚 맥락 포함 프롬프트:', contextPrompt);
 
 		// 1. 사용자 의도 분석
 		let intent;
@@ -352,6 +383,46 @@ export async function handleChatRequest(req, res) {
 		console.error('🚨 Error stack:', error.stack);
 		res.status(500).json({ 
 			error: '분석 처리 중 오류가 발생했습니다.',
+			details: error.message 
+		});
+	}
+}
+
+// 채팅 기록 조회 함수
+export async function getChatHistory(req, res) {
+	try {
+		const { user_id } = req.query;
+		
+		if (!user_id) {
+			return res.status(400).json({ error: 'user_id가 필요합니다.' });
+		}
+		
+		console.log('📚 채팅 기록 조회:', { user_id });
+		
+		// 최근 20개 채팅 기록 조회
+		const { data: chatHistory, error } = await supabase
+			.from('chat_messages')
+			.select('user_chat, ai_answer, created_at')
+			.eq('user_id', user_id)
+			.order('created_at', { ascending: true })
+			.limit(20);
+		
+		if (error) {
+			console.error('❌ 채팅 기록 조회 오류:', error);
+			return res.status(500).json({ error: '채팅 기록 조회 중 오류가 발생했습니다.' });
+		}
+		
+		console.log('✅ 채팅 기록 조회 성공:', chatHistory?.length || 0, '개');
+		
+		res.json({
+			chatHistory: chatHistory || [],
+			count: chatHistory?.length || 0
+		});
+		
+	} catch (error) {
+		console.error('🚨 채팅 기록 조회 오류:', error);
+		res.status(500).json({ 
+			error: '채팅 기록 조회 중 오류가 발생했습니다.',
 			details: error.message 
 		});
 	}

@@ -5,10 +5,13 @@ import { Message } from "@/types";
 import { Feather } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ListRenderItem, StyleSheet, Text, TextInput, TouchableOpacity, View, Keyboard } from "react-native";
+import { ListRenderItem, StyleSheet, Text, TextInput, TouchableOpacity, View, Keyboard, Dimensions } from "react-native";
 import { FlatList } from 'react-native-gesture-handler';
 import { supabase } from "@/lib/supabase";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
+// 차트 라이브러리 import
+import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 
 const MessagePart = () => {
   const [input, setInput] = useState<string>('');
@@ -16,6 +19,105 @@ const MessagePart = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("님");
   const flatListRef = useRef<FlatList>(null);
+  
+  // 화면 크기 가져오기
+  const screenWidth = Dimensions.get('window').width;
+  
+  // 최대 메시지 개수 제한
+  const MAX_MESSAGES = 20;
+
+  // 메시지 개수 제한 함수
+  const limitMessages = (messageList: Message[]) => {
+    if (messageList.length > MAX_MESSAGES) {
+      // 최근 20개만 유지 (오래된 것부터 제거)
+      return messageList.slice(-MAX_MESSAGES);
+    }
+    return messageList;
+  };
+
+  // 하루 초기화 확인 함수
+  const checkAndResetDaily = useCallback(async () => {
+    try {
+      const today = new Date().toDateString(); // "Mon Jan 20 2025" 형식
+      const lastResetDate = await AsyncStorage.getItem('@last_message_reset_date');
+      
+      if (lastResetDate !== today) {
+        // 하루가 지났으면 UI 초기화
+        console.log('📅 하루가 지나서 메시지 UI 초기화');
+        setMessages(createWelcomeMessages(userName));
+        
+        // 오늘 날짜 저장
+        await AsyncStorage.setItem('@last_message_reset_date', today);
+      }
+    } catch (error) {
+      console.error('일일 초기화 확인 오류:', error);
+    }
+  }, [userName]);
+
+  // 수동 초기화 함수 (디버깅용)
+  const manualReset = useCallback(async () => {
+    try {
+      console.log('🔄 수동으로 메시지 UI 초기화');
+      setMessages(createWelcomeMessages(userName));
+      await AsyncStorage.setItem('@last_message_reset_date', new Date().toDateString());
+    } catch (error) {
+      console.error('수동 초기화 오류:', error);
+    }
+  }, [userName]);
+
+  // 차트 상세 보기 함수
+  const handleChartDetail = (chartData: any, chartTitle: string) => {
+    router.push({
+      pathname: '/main/chart_detail/index',
+      params: {
+        chartData: JSON.stringify(chartData),
+        chartTitle: chartTitle
+      }
+    });
+  };
+
+  // 차트 렌더링 함수 (링크만 표시)
+  const renderChart = (chartData: any) => {
+    if (!chartData || !chartData.data) {
+      return (
+        <View style={styles.chartContainer}>
+          <Text style={styles.chartTitle}>📊 분석 차트</Text>
+          <View style={styles.chartPlaceholder}>
+            <Text style={styles.chartText}>차트 데이터가 없습니다.</Text>
+          </View>
+        </View>
+      );
+    }
+
+    // 차트 타입에 따라 다른 제목 설정
+    let chartTitle = '';
+    switch (chartData.type) {
+      case 'line':
+        chartTitle = '📊 감정 변화 차트';
+        break;
+      case 'bar':
+        chartTitle = '📊 감정 분포 차트';
+        break;
+      case 'pie':
+        chartTitle = '📊 감정 비율 차트';
+        break;
+      default:
+        chartTitle = '📊 분석 차트';
+    }
+
+    return (
+      <View style={styles.chartContainer}>
+        <Text style={styles.chartTitle}>{chartTitle}</Text>
+        <TouchableOpacity 
+          onPress={() => handleChartDetail(chartData, chartTitle)}
+          style={styles.chartLink}
+        >
+          <Text style={styles.chartLinkText}>자세히 보기</Text>
+          <Text style={styles.chartLinkIcon}>🔗</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   // 강제 스크롤 함수 
   const forceScrollToBottom = useCallback(() => {
@@ -43,6 +145,13 @@ const MessagePart = () => {
     
     loadUserName();
   }, []);
+
+  // 사용자 이름이 변경되면 일일 초기화 확인
+  useEffect(() => {
+    if (userName !== "님") {
+      checkAndResetDaily();
+    }
+  }, [userName, checkAndResetDaily]);
 
   // 현재 로그인된 사용자 정보 가져오기
   useEffect(() => {
@@ -96,26 +205,31 @@ const MessagePart = () => {
         
         // 환영 메시지 + 채팅 기록 조합
         const welcomeMessages = [...createWelcomeMessages(userName), ...formattedMessages];
-        setMessages(welcomeMessages);
+        setMessages(limitMessages(welcomeMessages));
         
         // 채팅 기록 로드 후 맨 아래로 스크롤 (강제 스크롤 사용)
         forceScrollToBottom();
       } else {
         // 채팅 기록이 없으면 환영 메시지만 표시
-        setMessages(createWelcomeMessages(userName));
+        setMessages(limitMessages(createWelcomeMessages(userName)));
       }
     } catch (error) {
       console.error('Failed to fetch chat history:', error);
       // 에러 시에도 환영 메시지는 표시
-      setMessages(createWelcomeMessages(userName));
+      setMessages(limitMessages(createWelcomeMessages(userName)));
     }
   }, [userId, userName]);
 
   useEffect(() => {
     // 사용자 ID가 없으면 채팅 기록을 가져오지 않음
     if (!userId) return;
-    fetchChatHistory();
-  }, [userId, fetchChatHistory]);
+    
+    // 먼저 일일 초기화 확인
+    checkAndResetDaily().then(() => {
+      // 초기화 후 채팅 기록 로드
+      fetchChatHistory();
+    });
+  }, [userId, fetchChatHistory, checkAndResetDaily]);
 
   // 키보드 이벤트 리스너
   useEffect(() => {
@@ -142,7 +256,7 @@ const MessagePart = () => {
         user: false,
         createdAt: format(new Date(), 'p'),
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => limitMessages([...prev, errorMessage]));
       return;
     }
 
@@ -153,7 +267,7 @@ const MessagePart = () => {
         user: true,
         createdAt: format(new Date(), 'p'), // ex) 1:15 AM
       };
-      setMessages(prev => [...prev, newMessage]);
+      setMessages(prev => limitMessages([...prev, newMessage]));
       setInput('');
       
       // 메시지 추가 후 자동 스크롤
@@ -167,7 +281,8 @@ const MessagePart = () => {
           },
           body: JSON.stringify({
             message: input,
-            user_id: userId
+            user_id: userId,
+            recent_messages: messages.slice(-20) // 최근 20개 대화 포함
           }),
         });
 
@@ -181,7 +296,7 @@ const MessagePart = () => {
             createdAt: format(new Date(), 'p'),
             chartData: data.chartData, // 차트 데이터 추가
           };
-          setMessages(prev => [...prev, aiResponse]);
+          setMessages(prev => limitMessages([...prev, aiResponse]));
           
           // AI 응답 후 자동 스크롤
           forceScrollToBottom();
@@ -193,7 +308,7 @@ const MessagePart = () => {
             user: false,
             createdAt: format(new Date(), 'p'),
           };
-          setMessages(prev => [...prev, errorMessage]);
+          setMessages(prev => limitMessages([...prev, errorMessage]));
           forceScrollToBottom();
         }
       } catch (error) {
@@ -204,7 +319,7 @@ const MessagePart = () => {
           user: false,
           createdAt: format(new Date(), 'p'),
         };
-        setMessages(prev => [...prev, errorMessage]);
+        setMessages(prev => limitMessages([...prev, errorMessage]));
         forceScrollToBottom();
       }
     }
@@ -224,22 +339,7 @@ const MessagePart = () => {
           <View style={styles.aiMessageContainer}>
             <Text style={styles.aiMessageText}>{item.text}</Text>
             {/* 차트 표시 */}
-            {item.chartData && (
-              <View style={styles.chartContainer}>
-                <Text style={styles.chartTitle}>📊 분석 차트</Text>
-                <View style={styles.chartPlaceholder}>
-                  <Text style={styles.chartText}>
-                    차트 타입: {item.chartData.type}
-                  </Text>
-                  <Text style={styles.chartText}>
-                    데이터 포인트: {item.chartData.data?.datasets?.[0]?.data?.length || 0}개
-                  </Text>
-                  <Text style={styles.chartText}>
-                    라벨: {item.chartData.data?.labels?.join(', ') || '없음'}
-                  </Text>
-                </View>
-              </View>
-            )}
+            {item.chartData && renderChart(item.chartData)}
           </View>
           <Text style={styles.time}>{item.createdAt}</Text>
         </View>
@@ -372,6 +472,31 @@ const styles = StyleSheet.create({
     ...FONTS.body,
     color: COLORS.black,
     marginBottom: 4,
+  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
+  },
+  chartLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.lightGray,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  chartLinkText: {
+    ...FONTS.body,
+    color: COLORS.primary,
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
+  chartLinkIcon: {
+    fontSize: 16,
   },
 })
 
