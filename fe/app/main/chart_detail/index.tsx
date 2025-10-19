@@ -121,10 +121,18 @@ const ChartDetailScreen = () => {
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={COLORS.primary} />
+          <Feather name="arrow-left" size={24} color={COLORS.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{chartTitle || '차트 상세'}</Text>
         <View style={styles.placeholder} />
+      </View>
+
+      {/* 차트 설명 섹션 */}
+      <View style={styles.descriptionContainer}>
+        <Text style={styles.descriptionTitle}>📊 감정 변화 분석</Text>
+        <Text style={styles.descriptionText}>
+          선택한 기간 동안의 피곤함 정도 변화를 시각화한 차트입니다.
+        </Text>
       </View>
 
       {/* 차트 컨테이너 */}
@@ -132,6 +140,20 @@ const ChartDetailScreen = () => {
         {renderChart()}
       </View>
 
+      {/* 차트 정보 섹션 */}
+      <View style={styles.infoSection}>
+        <View style={styles.infoCard}>
+          <Text style={styles.infoCardTitle}>💡 차트 읽는 방법</Text>
+          <Text style={styles.infoCardText}>
+            • 0점: 매우 좋음 (😍){'\n'}
+            • 1점: 좋음 (😆){'\n'}
+            • 2점: 보통 (😯){'\n'}
+            • 3점: 나쁨 (😐){'\n'}
+            • 4점: 매우 나쁨 (😭){'\n'}
+            • 5점: 화남 (😡)
+          </Text>
+        </View>
+      </View>
     </View>
   );
 };
@@ -147,24 +169,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: SIZES.large,
     paddingVertical: SIZES.medium,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 2,
-    borderBottomColor: COLORS.primary,
+    paddingTop: 50, // 상태바 고려
+    backgroundColor: COLORS.primary,
     shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
   backButton: {
     padding: SIZES.small,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    marginRight: SIZES.small,
   },
   headerTitle: {
     ...FONTS.h2,
-    color: COLORS.primary,
+    color: COLORS.white,
     fontWeight: 'bold',
     textAlign: 'center',
     flex: 1,
@@ -178,7 +202,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SIZES.large,
     backgroundColor: '#f8f9fa',
-    margin: SIZES.medium,
+    marginHorizontal: SIZES.medium,
+    marginVertical: SIZES.small,
     borderRadius: SIZES.large,
     borderWidth: 1,
     borderColor: '#e9ecef',
@@ -219,6 +244,55 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
     textAlign: 'center',
     fontWeight: '500',
+  },
+  descriptionContainer: {
+    backgroundColor: COLORS.lightGray,
+    padding: SIZES.large,
+    margin: SIZES.medium,
+    borderRadius: SIZES.large,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+  },
+  descriptionTitle: {
+    ...FONTS.h3,
+    color: COLORS.primary,
+    fontWeight: 'bold',
+    marginBottom: SIZES.small,
+  },
+  descriptionText: {
+    ...FONTS.body,
+    color: COLORS.darkGray,
+    lineHeight: 22,
+  },
+  infoSection: {
+    padding: SIZES.medium,
+    paddingBottom: 30,
+  },
+  infoCard: {
+    backgroundColor: COLORS.white,
+    padding: SIZES.large,
+    borderRadius: SIZES.large,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: COLORS.black,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  infoCardTitle: {
+    ...FONTS.h4,
+    color: COLORS.primary,
+    fontWeight: 'bold',
+    marginBottom: SIZES.small,
+  },
+  infoCardText: {
+    ...FONTS.body,
+    color: COLORS.darkGray,
+    lineHeight: 24,
   },
 });
 

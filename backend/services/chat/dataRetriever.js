@@ -53,9 +53,9 @@ export async function getRelevantRecords(user_id, timeRange = 'recent') {
 					console.warn('📝 데이터 검증: 잘못된 날짜 형식 필터링됨', record.date);
 					return false;
 				}
-				// 피로도 점수 검증 (1-10 범위)
+				// 피로도 점수 검증 (0-5 범위)
 				const fatigue = Number(record.fatigue);
-				if (isNaN(fatigue) || fatigue < 1 || fatigue > 10) {
+				if (isNaN(fatigue) || fatigue < 0 || fatigue > 5) {
 					console.warn('📝 데이터 검증: 잘못된 피로도 점수 필터링됨', record.fatigue);
 					return false;
 				}
