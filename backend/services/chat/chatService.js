@@ -125,7 +125,7 @@ async function handleSimpleRequest(req, res, intent, user_id, messageId) {
 					content: contextPrompt
 				}
 			],
-			max_tokens: 150,
+			max_tokens: 300,
 			temperature: 0.7
 		});
 
@@ -262,10 +262,11 @@ async function analyzeData(data, intent, userMessage, recentMessages) {
 			const fatigue = Number(row.fatigue);
 			let fatigueText;
 			if (Number.isFinite(fatigue)) {
-				if (fatigue >= 9) fatigueText = '극도로 피곤';
-				else if (fatigue >= 7) fatigueText = '매우 피곤';
-				else if (fatigue >= 5) fatigueText = '보통 피곤';
-				else if (fatigue >= 3) fatigueText = '약간 피곤';
+				if (fatigue >= 5) fatigueText = '극도로 피곤';
+				else if (fatigue >= 4) fatigueText = '매우 피곤';
+				else if (fatigue >= 3) fatigueText = '보통 피곤';
+				else if (fatigue >= 2) fatigueText = '약간 피곤';
+				else if (fatigue >= 1) fatigueText = '조금 피곤';
 				else fatigueText = '전혀 안 피곤';
 			} else {
 				fatigueText = '점수 없음';
@@ -276,7 +277,7 @@ async function analyzeData(data, intent, userMessage, recentMessages) {
 		})
 		.join('\n');
 
-	const systemPrompt = `너는 한국어로 답하는 따뜻한 부모 상담 AI야. 항상 한국어만 사용하고, 영어 등급(very good, okay 등)이나 내부 코드 라벨은 사용하지 마. 사용자는 일반 부모와 자폐/발달장애/ADHD 등 특별한 필요가 있는 아동의 부모일 수 있어. 숫자가 클수록 더 피곤함(1=전혀, 10=극도로). 부모님의 노고를 인정하고 격려하며, 실용적인 조언을 제공해줘.
+	const systemPrompt = `너는 한국어로 답하는 따뜻한 부모 상담 AI야. 항상 한국어만 사용하고, 영어 등급(very good, okay 등)이나 내부 코드 라벨은 사용하지 마. 사용자는 일반 부모와 자폐/발달장애/ADHD 등 특별한 필요가 있는 아동의 부모일 수 있어. 숫자가 클수록 더 피곤함(0=전혀 안 피곤, 5=극도로 피곤). 부모님의 노고를 인정하고 격려하며, 실용적인 조언을 제공해줘.
 
 	**🚨 절대 금지 사항:**
 	- **절대로 가짜 데이터나 존재하지 않는 기록을 만들어내지 마**
@@ -287,7 +288,7 @@ async function analyzeData(data, intent, userMessage, recentMessages) {
 	// 맥락 포함 프롬프트 생성
 	const contextPrompt = createContextPrompt(userMessage, recentMessages);
 	
-	const userPrompt = `다음은 부모의 일/주간 피곤함 기록(1~10, 높을수록 피곤)입니다:\n${formatted}\n\n요구사항:\n- 1문장 요약\n- 관찰된 패턴 2~3개(증가/감소/반복 시점, 주말/평일 차이 등)\n- 실행 계획 3가지(아동 지원 2, 부모 자기돌봄 1: 작게 시작)\n- 격려와 응원 메시지\n\n현재 질문: ${contextPrompt}`;
+	const userPrompt = `다음은 부모의 일/주간 피곤함 기록(0~5, 높을수록 피곤)입니다:\n${formatted}\n\n요구사항:\n- 1문장 요약\n- 관찰된 패턴 2~3개(증가/감소/반복 시점, 주말/평일 차이 등)\n- 실행 계획 3가지(아동 지원 2, 부모 자기돌봄 1: 작게 시작)\n- 격려와 응원 메시지\n\n현재 질문: ${contextPrompt}`;
 
 	try {
 		const completion = await openai.chat.completions.create({
@@ -296,7 +297,7 @@ async function analyzeData(data, intent, userMessage, recentMessages) {
 				{ role: 'system', content: systemPrompt },
 				{ role: 'user', content: userPrompt }
 			],
-			max_tokens: 290,
+			max_tokens: 500,
 			temperature: 0.6
 		});
 

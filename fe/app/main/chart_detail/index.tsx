@@ -35,22 +35,37 @@ const ChartDetailScreen = () => {
     backgroundGradientFrom: COLORS.white,
     backgroundGradientTo: COLORS.white,
     decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    color: (opacity = 1) => `rgba(52, 152, 219, ${opacity})`, // 더 선명한 파란색
     labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
     style: {
       borderRadius: 16,
     },
     propsForDots: {
-      r: "8",
+      r: "6",
       strokeWidth: "3",
       stroke: COLORS.primary,
+    },
+    propsForLabels: {
+      fontSize: 13,
+      fontWeight: 'bold',
+      color: '#2c3e50',
+    },
+    propsForVerticalLabels: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#2c3e50',
+    },
+    propsForHorizontalLabels: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#2c3e50',
     },
   };
 
   // 차트 렌더링
   const renderChart = () => {
-    const chartWidth = screenWidth - 40;
-    const chartHeight = screenHeight * 0.6;
+    const chartWidth = screenWidth - 60; // 좌우 여백 증가
+    const chartHeight = screenHeight * 0.45; // 높이를 줄여서 더 적절하게
 
     switch (parsedChartData.type) {
       case 'line':
@@ -117,17 +132,6 @@ const ChartDetailScreen = () => {
         {renderChart()}
       </View>
 
-      {/* 차트 정보 */}
-      <View style={styles.infoContainer}>
-        <Text style={styles.infoTitle}>📊 차트 정보</Text>
-        <Text style={styles.infoText}>타입: {parsedChartData.type}</Text>
-        <Text style={styles.infoText}>
-          데이터 포인트: {parsedChartData.data?.datasets?.[0]?.data?.length || 0}개
-        </Text>
-        <Text style={styles.infoText}>
-          라벨: {parsedChartData.data?.labels?.join(', ') || '없음'}
-        </Text>
-      </View>
     </View>
   );
 };
@@ -141,30 +145,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SIZES.medium,
-    paddingVertical: SIZES.small,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
-  },
-  backButton: {
-    padding: SIZES.small,
-  },
-  headerTitle: {
-    ...FONTS.h3,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-  },
-  placeholder: {
-    width: 40,
-  },
-  chartContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SIZES.medium,
-  },
-  chart: {
-    borderRadius: 16,
+    paddingHorizontal: SIZES.large,
+    paddingVertical: SIZES.medium,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 2,
+    borderBottomColor: COLORS.primary,
     shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
@@ -174,32 +159,66 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  infoContainer: {
-    padding: SIZES.medium,
-    backgroundColor: COLORS.lightGray,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.gray,
+  backButton: {
+    padding: SIZES.small,
   },
-  infoTitle: {
-    ...FONTS.h4,
+  headerTitle: {
+    ...FONTS.h2,
     color: COLORS.primary,
-    marginBottom: SIZES.small,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    flex: 1,
   },
-  infoText: {
-    ...FONTS.body,
-    color: COLORS.black,
-    marginBottom: 4,
+  placeholder: {
+    width: 40,
+  },
+  chartContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SIZES.large,
+    backgroundColor: '#f8f9fa',
+    margin: SIZES.medium,
+    borderRadius: SIZES.large,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: COLORS.black,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  chart: {
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: COLORS.black,
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: SIZES.medium,
+    padding: SIZES.large,
+    backgroundColor: COLORS.lightGray,
+    margin: SIZES.medium,
+    borderRadius: SIZES.large,
   },
   errorText: {
-    ...FONTS.body,
+    ...FONTS.h4,
     color: COLORS.gray,
     textAlign: 'center',
+    fontWeight: '500',
   },
 });
 

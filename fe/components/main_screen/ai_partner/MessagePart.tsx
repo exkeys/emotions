@@ -68,7 +68,7 @@ const MessagePart = () => {
   // 차트 상세 보기 함수
   const handleChartDetail = (chartData: any, chartTitle: string) => {
     router.push({
-      pathname: '/main/chart_detail/index',
+      pathname: '/main/chart_detail',
       params: {
         chartData: JSON.stringify(chartData),
         chartTitle: chartTitle
