@@ -15,6 +15,9 @@ import { metricsMiddleware, renderPrometheusMetrics } from './middleware/metrics
 // 서비스 import
 import { handleChatRequest, getChatHistory } from './services/chat/chatService.js';
 import { handleRecordRequest, getRecords, deleteRecord } from './services/recordService.js';
+import { getPersonalizedPosts, getUserProfile, getPersonalizedCacheStatus, updatePersonalizedCacheManual } from './services/personalizedService.js';
+import { getHotPosts, updateCache, getCacheStatus } from './services/HotissueService.js';
+import { getNewPosts, updateNewPostsCache, getNewPostsCacheStatus } from './services/recommandService.js';
 
 // Swagger import
 import { swaggerUi, specs } from './config/swagger.js';
@@ -336,6 +339,11 @@ app.delete('/record/:record_id', deleteRecord);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 app.post('/chat', handleChatRequest);
+
+// AI 추천 API 엔드포인트
+app.get('/api/ai-recommend/personalized', getPersonalizedPosts);
+app.get('/api/ai-recommend/hot-posts', getHotPosts);
+app.get('/api/ai-recommend/new-posts', getNewPosts);
 
 // Chat history endpoint
 /**

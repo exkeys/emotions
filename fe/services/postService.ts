@@ -89,13 +89,8 @@ export const getNewPosts = async (limit: number = 5, offset: number = 0): Promis
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    const data = await response.json();
-    
-    if (data.success) {
-      return data.data || [];
-    } else {
-      throw new Error(data.error || 'Failed to fetch new posts');
-    }
+    const result = await response.json();
+    return result.data || [];
   } catch (error) {
     console.error('Error fetching new posts:', error);
     return [];
@@ -111,13 +106,8 @@ export const getHotPosts = async (limit: number = 5, offset: number = 0): Promis
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    const data = await response.json();
-    
-    if (data.success) {
-      return data.data || [];
-    } else {
-      throw new Error(data.error || 'Failed to fetch hot posts');
-    }
+    const result = await response.json();
+    return result.data || [];
   } catch (error) {
     console.error('Error fetching hot posts:', error);
     return [];
@@ -133,13 +123,8 @@ export const getPersonalizedPosts = async (userId: string, limit: number = 5, of
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    const data = await response.json();
-    
-    if (data.success) {
-      return data.data || [];
-    } else {
-      throw new Error(data.error || 'Failed to fetch personalized posts');
-    }
+    const result = await response.json();
+    return result.data || [];
   } catch (error) {
     console.error('Error fetching personalized posts:', error);
     return [];

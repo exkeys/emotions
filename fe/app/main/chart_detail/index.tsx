@@ -127,32 +127,9 @@ const ChartDetailScreen = () => {
         <View style={styles.placeholder} />
       </View>
 
-      {/* 차트 설명 섹션 */}
-      <View style={styles.descriptionContainer}>
-        <Text style={styles.descriptionTitle}>📊 감정 변화 분석</Text>
-        <Text style={styles.descriptionText}>
-          선택한 기간 동안의 피곤함 정도 변화를 시각화한 차트입니다.
-        </Text>
-      </View>
-
       {/* 차트 컨테이너 */}
       <View style={styles.chartContainer}>
         {renderChart()}
-      </View>
-
-      {/* 차트 정보 섹션 */}
-      <View style={styles.infoSection}>
-        <View style={styles.infoCard}>
-          <Text style={styles.infoCardTitle}>💡 차트 읽는 방법</Text>
-          <Text style={styles.infoCardText}>
-            • 0점: 매우 좋음 (😍){'\n'}
-            • 1점: 좋음 (😆){'\n'}
-            • 2점: 보통 (😯){'\n'}
-            • 3점: 나쁨 (😐){'\n'}
-            • 4점: 매우 나쁨 (😭){'\n'}
-            • 5점: 화남 (😡)
-          </Text>
-        </View>
       </View>
     </View>
   );
@@ -170,7 +147,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SIZES.large,
     paddingVertical: SIZES.medium,
     paddingTop: 50, // 상태바 고려
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#3498db', // 명시적 파란색
     shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
@@ -179,12 +156,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
+    minHeight: 80, // 최소 높이 보장
   },
   backButton: {
     padding: SIZES.small,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 25,
     marginRight: SIZES.small,
+    minWidth: 50,
+    minHeight: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     ...FONTS.h2,
@@ -192,6 +174,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     flex: 1,
+    fontSize: 18,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   placeholder: {
     width: 40,
@@ -244,55 +230,6 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
     textAlign: 'center',
     fontWeight: '500',
-  },
-  descriptionContainer: {
-    backgroundColor: COLORS.lightGray,
-    padding: SIZES.large,
-    margin: SIZES.medium,
-    borderRadius: SIZES.large,
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
-  },
-  descriptionTitle: {
-    ...FONTS.h3,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    marginBottom: SIZES.small,
-  },
-  descriptionText: {
-    ...FONTS.body,
-    color: COLORS.darkGray,
-    lineHeight: 22,
-  },
-  infoSection: {
-    padding: SIZES.medium,
-    paddingBottom: 30,
-  },
-  infoCard: {
-    backgroundColor: COLORS.white,
-    padding: SIZES.large,
-    borderRadius: SIZES.large,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    shadowColor: COLORS.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  infoCardTitle: {
-    ...FONTS.h4,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    marginBottom: SIZES.small,
-  },
-  infoCardText: {
-    ...FONTS.body,
-    color: COLORS.darkGray,
-    lineHeight: 24,
   },
 });
 
